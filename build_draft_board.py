@@ -1223,7 +1223,7 @@ def main():
         print(f"  ({len(rows) - len(board)} irrelevant players held back in the CSV)")
 
     csv_path = os.path.join(args.outdir, "nfl_fantasy_ppr.csv")
-    html_path = os.path.join(args.outdir, "fantasy-draft-board.html")
+    html_path = os.path.join(args.outdir, "index.html")
     write_csv(rows, csv_path)
     charts = build_depth_charts(rows, seasons[0])
     write_html(board, html_path, seasons, args.teams, adp_info, adp_year,
