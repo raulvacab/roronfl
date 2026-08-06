@@ -1,0 +1,58 @@
+name: Build draft board
+
+on:
+  schedule:
+    # 09:00 UTC = 5am Eastern. ADP feeds refresh overnight, so the board is
+    # current before you wake up.
+    - cron: "0 9 * * *"
+  workflow_dispatch:        # manual "Run workflow" button
+  push:
+    branches: [main]        # rebuild whenever you change the script
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two builds publish at once. Don't cancel a run mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build the board
+        run: |
+          python build_draft_board.py \
+            --teams ${{ vars.LEAGUE_TEAMS || 12 }} \
+            --slot-depth ${{ vars.SLOT_DEPTH || 200 }} \
+            --outdir public
+
+      - name: Show what was built
+        run: ls -lh public/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

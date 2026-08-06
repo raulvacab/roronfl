@@ -6,7 +6,7 @@ Pulls REAL NFL player + fantasy stats from the Sleeper API (free, no key,
 read-only) and generates:
 
   1. nfl_fantasy_ppr.csv          - full dataset, every fantasy-relevant player
-  2. fantasy-draft-board.html     - self-contained dashboard, opens in a browser
+  2. index.html                   - self-contained dashboard, opens in a browser
 
 Roster slots produced: QB, RB1, RB2, WR1, WR2, WR3, TE, D/ST, K (+ bench depth)
 Scoring: PPR (pts_ppr straight from Sleeper)
@@ -1161,6 +1161,11 @@ def main():
     ap.add_argument("--no-adp", action="store_true", help="Skip multi-platform ADP")
     ap.add_argument("--slot-depth", type=int, default=200, metavar="N",
                     help="Cap slot lists at positional draft rank N (default: 200)")
+    ap.add_argument("--html-name", default="index.html", metavar="FILE",
+                    help="Output HTML filename (default: index.html, what GitHub Pages serves)")
+    ap.add_argument("--min-players", type=int, default=100, metavar="N",
+                    help="Abort if the board has fewer than N players (default: 100). "
+                         "Guards CI against publishing an empty board on a bad data day.")
     ap.add_argument("--find", metavar="NAME",
                     help="Look up a player and explain why he is on or off the board")
     args = ap.parse_args()
@@ -1222,9 +1227,17 @@ def main():
               f"({rookies} rookies total)")
         print(f"  ({len(rows) - len(board)} irrelevant players held back in the CSV)")
 
+    if len(board) < args.min_players:
+        print(f"\nABORT: only {len(board)} players on the board, expected at least "
+              f"{args.min_players}.")
+        print("A data source probably failed. Nothing was written — the previous "
+              "build stays live.")
+        sys.exit(1)
+
     csv_path = os.path.join(args.outdir, "nfl_fantasy_ppr.csv")
-    html_path = os.path.join(args.outdir, "index.html")
+    html_path = os.path.join(args.outdir, args.html_name)
     write_csv(rows, csv_path)
+
     charts = build_depth_charts(rows, seasons[0])
     write_html(board, html_path, seasons, args.teams, adp_info, adp_year,
                args.slot_depth, charts)
